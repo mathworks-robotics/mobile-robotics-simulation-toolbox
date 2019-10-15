@@ -2,6 +2,12 @@
 %
 % Copyright 2019 The MathWorks, Inc.
 
+% Find the figure number to start plotting over
+obj = findobj('Tag','MultiRobotEnvironment');
+figNum = obj.Number;
+figure(figNum);
+hold on
+
 % Title
 title('Robot Soccer Simulation');
 
@@ -24,3 +30,5 @@ xticks('');
 axis equal
 xlim([0 92]);
 ylim([0 47]);
+
+hold off

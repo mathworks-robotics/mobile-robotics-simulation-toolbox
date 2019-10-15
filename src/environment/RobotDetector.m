@@ -8,7 +8,10 @@ classdef RobotDetector < matlab.System & matlab.system.mixin.CustomIcon & matlab
     % Copyright 2018-2019 The MathWorks, Inc.
     
     %% PROPERTIES
-    % Public (user-visible) properties
+    % Public (user-visible) 
+    properties(Nontunable)
+        mapName = ''; % Map
+    end
     properties
         robotIdx = 1;           % Robot index
         sensorOffset = [0,0];   % Robot detector offset (x,y) [m]
@@ -40,18 +43,8 @@ classdef RobotDetector < matlab.System & matlab.system.mixin.CustomIcon & matlab
             else
                obj.robotIdx = 1;
             end
-            if nargin > 0 
+            if nargin > 0
                 obj.env = varargin{1};
-            else
-                % Get to this step only if the constructor is called
-                % without arguments. Defaults to behavior compatible with
-                % Simulink blocks.
-                try
-                    global slMultiRobotEnv  
-                    obj.env = slMultiRobotEnv;
-                catch
-                    error('No Multi-Robot Environment available');
-                end
             end
             
         end
@@ -60,34 +53,36 @@ classdef RobotDetector < matlab.System & matlab.system.mixin.CustomIcon & matlab
     methods(Access = protected)
       
         function setupImpl(obj)           
-            
-           if isempty(obj.env)
-                global slMultiRobotEnv
-                obj.env = slMultiRobotEnv;
+                      
+           % Attach the robot detector to the environment, if it exists
+           if ~isempty(obj.env)
+               attachRobotDetector(obj.env,obj);                           
+               % Ensure to use the same map as the visualizer
+               obj.mapName = obj.env.mapName;
            end
-           
-           % Attach the robot detector to the environment
-           attachRobotDetector(obj.env,obj);
-           
-           % Ensure to use the same map as the visualizer
-           obj.map = internal.createMapFromName(obj.env.mapName);
+
            obj.hasMap = ~isempty(obj.map);
-           
+           obj.map = internal.createMapFromName(obj.mapName);
+               
         end
         
-        % Step method: Wraps around the step method of the RobotDetector
-        function detections = stepImpl(obj)                 
+        % Step method
+        function detections = stepImpl(obj,varargin)                 
             % Initialize
             ranges = [];
             angles = [];
             labels = [];
             
             % Find the sensor pose and check if valid
-            pose = obj.env.Poses(:,obj.robotIdx);
-            theta = pose(3);
+            if nargin < 2
+                poses = obj.env.Poses; % If using an attached environment (MATLAB usage)
+            else
+                poses = varargin{1}; % If passing in the poses as input (Simulink usage)
+            end
+            theta = poses(3,obj.robotIdx);
             offsetVec = [cos(theta) -sin(theta); ...
                          sin(theta)  cos(theta)]*obj.sensorOffset';
-            sensorPose = pose + [offsetVec; obj.sensorAngle];  
+            sensorPose = poses(:,obj.robotIdx) + [offsetVec; obj.sensorAngle];  
             if ~obj.hasMap
                 validPose = true;
             else
@@ -99,7 +94,7 @@ classdef RobotDetector < matlab.System & matlab.system.mixin.CustomIcon & matlab
             
             % Return the range and angle for all robots
             % First, find the offsets
-            offsets = obj.env.Poses(1:2,:) - sensorPose(1:2);
+            offsets = poses(1:2,:) - sensorPose(1:2);
             offsets(:,obj.robotIdx) = inf; % Take out the "self-offset"
             
             if ~isempty(offsets) && validPose
@@ -195,6 +190,19 @@ classdef RobotDetector < matlab.System & matlab.system.mixin.CustomIcon & matlab
             loadObjectImpl@matlab.System(obj,s,wasInUse);
         end
                 
+    end
+    
+    methods (Access = protected)
+       
+        % Define total number of inputs for system with optional inputs
+        function n = getNumInputsImpl(obj)
+            if isempty(obj.env)
+                n = 1;
+            else
+                n = 0;
+            end
+        end 
+        
     end
     
     methods (Static, Access = protected)

@@ -1,7 +1,7 @@
 %% EXAMPLE: Differential drive vehicle following waypoints using the 
-% Pure Pursuit algorithm (robotics.PurePursuit)
+% Pure Pursuit algorithm
 %
-% Copyright 2018 The MathWorks, Inc.
+% Copyright 2018-2019 The MathWorks, Inc.
 
 %% Define Vehicle
 R = 0.1;                % Wheel radius [m]
@@ -9,7 +9,7 @@ L = 0.5;                % Wheelbase [m]
 dd = DifferentialDrive(R,L);
 
 %% Simulation parameters
-sampleTime = 0.05;             % Sample time [s]
+sampleTime = 0.1;               % Sample time [s]
 tVec = 0:sampleTime:15;         % Time array
 
 initPose = [0;0;0];             % Initial pose (x y theta)
@@ -24,7 +24,7 @@ viz = Visualizer2D;
 viz.hasWaypoints = true;
 
 %% Pure Pursuit Controller
-controller = robotics.PurePursuit;
+controller = controllerPurePursuit;
 controller.Waypoints = waypoints;
 controller.LookaheadDistance = 0.35;
 controller.DesiredLinearVelocity = 0.75;
@@ -32,7 +32,7 @@ controller.MaxAngularVelocity = 1.5;
 
 %% Simulation loop
 close all
-r = robotics.Rate(1/sampleTime);
+r = rateControl(1/sampleTime);
 for idx = 2:numel(tVec) 
     % Run the Pure Pursuit controller and convert output to wheel speeds
     [vRef,wRef] = controller(pose(:,idx-1));

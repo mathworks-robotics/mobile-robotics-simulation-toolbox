@@ -19,6 +19,7 @@ classdef MultiRobotEnv < matlab.System
         mapName = '';               % Map
         hasWaypoints = false;       % Accept waypoints
         hasLidar = false;           % Accept lidar inputs
+        hasObjects = false;         % Accept objects
         hasObjDetector = false;     % Accept object detections
         hasRobotDetector = false;   % Accept robot detections
         plotSensorLines = true;     % Plot sensor lines
@@ -84,7 +85,7 @@ classdef MultiRobotEnv < matlab.System
 
             % Check for closed figure
             if ~isvalid(obj.fig)
-                return;
+                setupVisualization(obj);
             end            
             
             % Unpack the optional arguments
@@ -104,7 +105,7 @@ classdef MultiRobotEnv < matlab.System
                 ranges = cell(1,obj.numRobots);
             end
             % Objects
-            if any(obj.hasObjDetector) 
+            if numel(varargin) >= idx
                 objects = varargin{idx};
             else
                 objects = [];
@@ -190,7 +191,7 @@ classdef MultiRobotEnv < matlab.System
                     obj.RobotHandle{rIdx} = plot(obj.ax,x,y,'Color',rColor,'LineWidth',1.5);
                 else
                     % Point robot
-                    obj.RobotHandle{rIdx} = plot(obj.ax,0,0,'bo', ...
+                    obj.RobotHandle{rIdx} = plot(obj.ax,0,0,'o','Color',rColor, ...
                          'LineWidth',1.5,'MarkerFaceColor',[1 1 1]);
                 end
                 % Initialize robot IDs, if enabled
@@ -229,15 +230,17 @@ classdef MultiRobotEnv < matlab.System
             end
             
             % Initialize objects and object detector lines
-            if numel(obj.objectMarkers) == 1
-                obj.ObjectHandles = scatter(obj.ax,[],[],75,... 
-                    obj.objectMarkers,'filled','LineWidth',2);
-            else
-                for idx = 1:numel(obj.objectMarkers)
-                    obj.ObjectHandles(idx) = scatter(obj.ax,[],[],75,... 
-                        obj.objectMarkers(idx),'filled','LineWidth',2);
+            if obj.hasObjects
+                if numel(obj.objectMarkers) == 1
+                    obj.ObjectHandles = scatter(obj.ax,[],[],75,...
+                        obj.objectMarkers,'filled','LineWidth',2);
+                else
+                    for idx = 1:numel(obj.objectMarkers)
+                        obj.ObjectHandles(idx) = scatter(obj.ax,[],[],75,...
+                            obj.objectMarkers(idx),'filled','LineWidth',2);
+                    end
                 end
-            end             
+            end
             obj.ObjDetectorHandles = cell(obj.numRobots,1);
             for rIdx = 1:obj.numRobots
                 if obj.hasObjDetector(rIdx)
@@ -281,7 +284,7 @@ classdef MultiRobotEnv < matlab.System
             end
             
             % Update the objects
-            if numel(objects) <= 1
+            if size(objects,1) <= 1
                 for idx = 1:numel(obj.ObjectHandles)
                     set(obj.ObjectHandles(idx),'xdata',[],'ydata',[],'cdata',[]);
                 end
@@ -521,28 +524,29 @@ classdef MultiRobotEnv < matlab.System
             
         end    
         
-        % Attaches all properties associated with a LidarSensor object
-        function attachLidarSensor(obj,rIdx,lidar)
+        % Attaches all properties associated with a MultiRobotLidarSensor object
+        function attachLidarSensor(obj,lidar)
+            release(obj)
+                     
             if numel(obj.hasLidar) ~= obj.numRobots
-                obj.hasLidar = repmat(obj.hasLidar,[1,obj.numRobots]);
+                obj.hasLidar(obj.numRobots) = false;
             end
+            
+            rIdx = lidar.robotIdx; 
             obj.hasLidar(rIdx) = true;
             obj.sensorOffset{rIdx} = lidar.sensorOffset;
             obj.scanAngles{rIdx} = lidar.scanAngles;
             
             % Ensure to use the same map as the visualizer
-            release(lidar);
-            lidar.mapName = obj.mapName;
-            lidar.isMultiRobot = true;
-            lidar.robotIdx = rIdx;
             setEnvironment(lidar,obj);
         end
         
         % Attaches all properties associated with an ObjectDetector object
         function attachObjectDetector(obj,rIdx,detector)
             if numel(obj.hasObjDetector) ~= obj.numRobots
-                obj.hasObjDetector = repmat(obj.hasObjDetector,[1,obj.numRobots]);
+                obj.hasObjDetector(obj.numRobots) = false;
             end 
+            obj.hasObjects = true;
             obj.hasObjDetector(rIdx) = true;
             obj.objDetectorOffset{rIdx} = detector.sensorOffset;
             obj.objDetectorAngle(rIdx) = detector.sensorAngle;
@@ -559,7 +563,7 @@ classdef MultiRobotEnv < matlab.System
             release(obj);
             
             if numel(obj.hasRobotDetector) ~= obj.numRobots
-                obj.hasRobotDetector = repmat(obj.hasRobotDetector,[1,obj.numRobots]);
+                obj.hasRobotDetector(obj.numRobots) = false;
             end
             
             rIdx = detector.robotIdx;
@@ -568,6 +572,7 @@ classdef MultiRobotEnv < matlab.System
             obj.robotDetectorAngle(rIdx) = detector.sensorAngle;
             obj.robotDetectorFOV(rIdx) = detector.fieldOfView;
             obj.robotDetectorMaxRange(rIdx) = detector.maxRange;
+            
         end
         
     end
@@ -583,7 +588,7 @@ classdef MultiRobotEnv < matlab.System
             if any(obj.hasLidar) 
                 n = n + 1;
             end
-            if any(obj.hasObjDetector) 
+            if obj.hasObjects
                 n = n + 1;
             end 
         end 

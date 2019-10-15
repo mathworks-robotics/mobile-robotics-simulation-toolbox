@@ -9,6 +9,5 @@ addpath(genpath('examples'))
 addpath(genpath('src'))
 addpath(genpath('doc'))
 
-% Open the main library and getting started guide
-mobileRoboticsLib
+% Open the getting started guide
 edit GettingStarted

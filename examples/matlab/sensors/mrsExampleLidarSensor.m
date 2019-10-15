@@ -1,5 +1,5 @@
 %% Lidar Sensor Example
-% Copyright 2018 The MathWorks, Inc.
+% Copyright 2018-2019 The MathWorks, Inc.
 close all
 
 %% Create environment
@@ -17,7 +17,7 @@ viz.mapName = 'map';
 attachLidarSensor(viz,lidar);
 
 %% Simulation parameters
-sampleTime = 0.05;              % Sample time [s]
+sampleTime = 0.1;              % Sample time [s]
 initPose = [1; 3; pi/4];        % Initial pose (x y theta)
 
 % Initialize time, input, and pose arrays
@@ -32,7 +32,7 @@ pose = zeros(3,numel(tVec));    % Pose matrix
 pose(:,1) = initPose;
 
 %% Simulation loop
-r = robotics.Rate(1/sampleTime);
+r = rateControl(1/sampleTime);
 for idx = 2:numel(tVec)   
     % Convert the reference speeds to world coordinates
     vel = bodyToWorld(ref(:,idx-1),pose(:,idx-1));
@@ -42,6 +42,6 @@ for idx = 2:numel(tVec)
     
     % Update lidar and visualization
     ranges = lidar(pose(:,idx));
-    viz(pose(:,idx),ranges)  
+    viz(pose(:,idx),ranges)
     waitfor(r);
 end

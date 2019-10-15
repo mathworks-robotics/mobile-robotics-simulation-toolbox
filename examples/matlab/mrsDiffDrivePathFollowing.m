@@ -1,7 +1,7 @@
 %% EXAMPLE: Differential Drive Path Following
 % In this example, a differential drive robot navigates a set of waypoints 
 % using the Pure Pursuit algorithm while avoiding obstacles using the
-% Vector Field Histogram algorithm.
+% Vector Field Histogram (VFH) algorithm.
 % 
 % Copyright 2019 The MathWorks, Inc.
 
@@ -13,7 +13,7 @@ dd = DifferentialDrive(R,L);
 
 % Sample time and time array
 sampleTime = 0.1;              % Sample time [s]
-tVec = 0:sampleTime:40;        % Time array
+tVec = 0:sampleTime:45;        % Time array
 
 % Initial conditions
 initPose = [2;2;0];            % Initial pose (x y theta)
@@ -45,14 +45,14 @@ waypoints = [initPose(1:2)';
              8 2];
 
 % Pure Pursuit Controller
-controller = robotics.PurePursuit;
+controller = controllerPurePursuit;
 controller.Waypoints = waypoints;
 controller.LookaheadDistance = 0.5;
 controller.DesiredLinearVelocity = 0.75;
 controller.MaxAngularVelocity = 1.5;
 
-% Vector Field Histogram for obstacle avoidance
-vfh = robotics.VectorFieldHistogram;
+% Vector Field Histogram (VFH) for obstacle avoidance
+vfh = controllerVFH;
 vfh.DistanceLimits = [0.05 3];
 vfh.NumAngularSectors = 36;
 vfh.HistogramThresholds = [5 10];
@@ -61,7 +61,7 @@ vfh.SafetyDistance = L;
 vfh.MinTurningRadius = 0.25;
 
 %% Simulation loop
-r = robotics.Rate(1/sampleTime);
+r = rateControl(1/sampleTime);
 for idx = 2:numel(tVec) 
     
     % Get the sensor readings

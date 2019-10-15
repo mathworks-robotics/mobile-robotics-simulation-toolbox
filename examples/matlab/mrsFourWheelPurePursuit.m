@@ -1,8 +1,8 @@
 %% EXAMPLE: Four-wheel vehicle with zero sideslip steering 
 % (equal and opposite front and rear steering), following waypoints 
-% using the Pure Pursuit algorithm (robotics.PurePursuit)
+% using the Pure Pursuit algorithm
 %
-% Copyright 2018 The MathWorks, Inc.
+% Copyright 2018-2019 The MathWorks, Inc.
 
 %% Define Vehicle
 wheelRadius = 0.1;             % Wheel radius [m]
@@ -11,7 +11,7 @@ rearLen = 0.2;                 % Distance from CG to rear wheels [m]
 vehicle = FourWheelSteering(wheelRadius,[frontLen rearLen]);
 
 %% Simulation parameters
-sampleTime = 0.05;             % Sample time [s]
+sampleTime = 0.1;               % Sample time [s]
 tVec = 0:sampleTime:15;         % Time array
 
 initPose = [0;0;0];             % Initial pose (x y theta)
@@ -30,7 +30,7 @@ wArray = zeros(2,numel(tVec)-1);      % Wheel speeds
 phiArray = zeros(2,numel(tVec)-1);    % Steer angles
 
 %% Pure Pursuit Controller
-controller = robotics.PurePursuit;
+controller = controllerPurePursuit;
 controller.Waypoints = waypoints;
 controller.LookaheadDistance = 0.3;
 controller.DesiredLinearVelocity = 0.75;
@@ -38,7 +38,7 @@ controller.MaxAngularVelocity = 0.75;
 
 %% Simulation loop
 close all
-r = robotics.Rate(1/sampleTime);
+r = rateControl(1/sampleTime);
 for idx = 2:numel(tVec) 
     % Run the Pure Pursuit controller and convert output to wheel speeds
     [vRef,wRef] = controller(pose(:,idx-1));

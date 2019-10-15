@@ -1,5 +1,5 @@
 %% Object Detector Example
-% Copyright 2018 The MathWorks, Inc.
+% Copyright 2018-2019 The MathWorks, Inc.
 clc
 close all
 
@@ -36,7 +36,7 @@ pose = zeros(3,numel(tVec));    % Pose matrix
 pose(:,1) = initPose;
 
 %% Simulation loop
-r = robotics.Rate(1/sampleTime);
+r = rateControl(1/sampleTime);
 for idx = 2:numel(tVec)   
     % Convert the reference speeds to world coordinates
     vel = bodyToWorld(ref(:,idx-1),pose(:,idx-1));
@@ -56,7 +56,7 @@ for idx = 2:numel(tVec)
         else
             disp('No objects detected'); 
         end
-    end
-    waitfor(r);
+    end  
     
+    waitfor(r);
 end

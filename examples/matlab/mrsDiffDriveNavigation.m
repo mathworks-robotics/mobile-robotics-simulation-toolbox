@@ -1,6 +1,6 @@
 %% EXAMPLE: Differential Drive Path Planning and Navigation
-% In this example, a path is found in an occupancy grid using a probabilistic
-% roadmap (robotics.PRM) and followed using Pure Pursuit (robotics.PurePursuit)
+% In this example, a path is found in an occupancy grid using a 
+% probabilistic roadmap (PRM) and followed using Pure Pursuit
 % 
 % Copyright 2018-2019 The MathWorks, Inc.
 
@@ -11,7 +11,7 @@ dd = DifferentialDrive(R,L);
 
 %% Simulation parameters
 sampleTime = 0.1;               % Sample time [s]
-tVec = 0:sampleTime:20;         % Time array
+tVec = 0:sampleTime:25;         % Time array
 
 initPose = [2;2;0];             % Initial pose (x y theta)
 pose = zeros(3,numel(tVec));    % Pose matrix
@@ -24,7 +24,7 @@ load exampleMap
 inflate(map,R);
 
 % Create a Probabilistic Road Map (PRM)
-planner = robotics.PRM(map);
+planner = mobileRobotPRM(map);
 planner.NumNodes = 75;
 planner.ConnectionDistance = 5;
 
@@ -35,7 +35,7 @@ waypoints = findpath(planner,startPoint,goalPoint);
 show(planner)
 
 %% Pure Pursuit Controller
-controller = robotics.PurePursuit;
+controller = controllerPurePursuit;
 controller.Waypoints = waypoints;
 controller.LookaheadDistance = 0.35;
 controller.DesiredLinearVelocity = 0.75;
@@ -48,7 +48,7 @@ viz.hasWaypoints = true;
 viz.mapName = 'map';
 
 %% Simulation loop
-r = robotics.Rate(1/sampleTime);
+r = rateControl(1/sampleTime);
 for idx = 2:numel(tVec) 
     % Run the Pure Pursuit controller and convert output to wheel speeds
     [vRef,wRef] = controller(pose(:,idx-1));

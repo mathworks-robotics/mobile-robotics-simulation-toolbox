@@ -1,6 +1,6 @@
 %% EXAMPLE: Vehicle following waypoints using nonlinear Model Predictive Control (MPC)
 %
-% Copyright 2018 The MathWorks, Inc.
+% Copyright 2018-2019 The MathWorks, Inc.
 
 %% Define Vehicle
 wheelRadius = 0.1;                      % Wheel radius [m]
@@ -59,7 +59,7 @@ controller.MV(3).Min = -pi/2;    controller.MV(3).RateMin = -pi/4;
 
 %% Simulation loop
 close all
-r = robotics.Rate(1/sampleTime);
+r = rateControl(1/sampleTime);
 u = zeros(3,numel(tVec));
 wheelSpeeds = zeros(3,numel(tVec));
 
