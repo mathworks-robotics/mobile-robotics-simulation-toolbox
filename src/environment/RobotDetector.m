@@ -60,10 +60,10 @@ classdef RobotDetector < matlab.System & matlab.system.mixin.CustomIcon & matlab
                % Ensure to use the same map as the visualizer
                obj.mapName = obj.env.mapName;
            end
-
-           obj.hasMap = ~isempty(obj.map);
+           
            obj.map = internal.createMapFromName(obj.mapName);
-               
+           obj.hasMap = ~isempty(obj.map);
+    
         end
         
         % Step method
