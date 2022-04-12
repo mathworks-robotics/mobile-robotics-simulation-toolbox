@@ -11,15 +11,15 @@ end
 q_star = [0;(3^0.5);1;(3^0.5);1.5;(3^0.5)/2;1;0;0;0;-0.5;(3^0.5)/2];
 rotate_theta = zeros(2,2,n);
 for i=1:n
-    rotate_theta(1:end,1:end,i) = [cos(original_poses(3,i)),-sin(original_poses(3,i));sin(original_poses(3,i)),cos(original_poses(3,i))];
+    rotate_theta(:,:,i) = [cos(original_poses(3,i)),-sin(original_poses(3,i));sin(original_poses(3,i)),cos(original_poses(3,i))];
 end
 world_2_local = blkdiag(rotate_theta(:,:,1),rotate_theta(:,:,2),rotate_theta(:,:,3),rotate_theta(:,:,4),rotate_theta(:,:,5),rotate_theta(:,:,6));
-q_star_local = world_2_local*q_star;
+% q_star_local = world_2_local*q_star;
 rotate_90 = [0,1;-1,0];
 rotate_90_block = blkdiag(rotate_90,rotate_90,rotate_90,rotate_90,rotate_90,rotate_90);
-q_star_perpendicular = rotate_90_block*q_star_local;
+q_star_perpendicular = rotate_90_block*q_star;
 
-N = [q_star_local,q_star_perpendicular,E1,E2];
+N = [q_star,q_star_perpendicular,E1,E2];
 [U,S,V] = svd(N);
 U_last = U(:,5:end);
 

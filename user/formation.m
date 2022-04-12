@@ -55,8 +55,8 @@ function vel = swarmTeamController(poses,rIdx,control_m,original_poses)
     for neighbor_index = 1:col
         if neighbor_index ~= rIdx
             control_m(2*rIdx-1:2*rIdx,2*neighbor_index-1:2*neighbor_index)
-            pose_local = [cos(original_poses(3,rIdx)),sin(original_poses(3,rIdx));-sin(original_poses(3,rIdx)),cos(original_poses(3,rIdx))]*(poses(1:2,neighbor_index) - poses(1:2,rIdx));
-%             pose_local =(poses(1:2,neighbor_index) - poses(1:2,rIdx));
+            % pose_local = [cos(original_poses(3,rIdx)),sin(original_poses(3,rIdx));-sin(original_poses(3,rIdx)),cos(original_poses(3,rIdx))]*(poses(1:2,neighbor_index) - poses(1:2,rIdx));
+            pose_local =(poses(1:2,neighbor_index) - poses(1:2,rIdx));
             vel_xy = vel_xy + control_m(2*rIdx-1:2*rIdx,2*neighbor_index-1:2*neighbor_index)*-pose_local;
         end
     end
