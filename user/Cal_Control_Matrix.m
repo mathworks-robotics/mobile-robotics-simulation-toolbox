@@ -8,8 +8,9 @@ function A_final = Cal_Control_Matrix(agent_number,graph_matrix_semi)
         E1(2*i-1) = 1;
         E2(2*i) = 1;
     end
-
-    q_star = [0;(3^0.5);1;(3^0.5);1.5;(3^0.5)/2;1;0;0;0;-0.5;(3^0.5)/2];  % core base 3
+    fid= fopen('test.txt', 'r');    % clear the data in txt
+    q_star =fscanf(fid, '%f', [n*2,1]);  
+%     q_star = [0;(3^0.5);1;(3^0.5);1.5;(3^0.5)/2;1;0;0;0;-0.5;(3^0.5)/2];  % core base 3
     rotate_90 = [0,1;-1,0];
     rotate_90_block = blkdiag(rotate_90,rotate_90,rotate_90,rotate_90,rotate_90,rotate_90);  
     q_star_perpendicular = rotate_90_block*q_star;  % core base 4

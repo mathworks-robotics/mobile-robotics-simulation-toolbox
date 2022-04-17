@@ -20,7 +20,8 @@ vel_xy = zeros(2,numRobots);
 vel_vw = zeros(2,numRobots);
 d_poses = zeros(3,numRobots);
 h_matrix= zeros(2,2);
-
+distance_u = zeros(2,1);
+distance_control_id_pair = [1;4];
 Control_Matrix = Cal_Control_Matrix(6,graph_matrix_semi);
 
 %% Simulation loop
@@ -40,13 +41,23 @@ for idx = 2:numel(tVec)
         vel_vw(:,rIdx) = h_matrix  * vel_xy(:,rIdx);
         d_poses(:,rIdx) = [cos(poses(3,rIdx)),0;sin(poses(3,rIdx)),0;0,1] * vel_vw(:,rIdx);
     end
-    
+    if idx>1000
+    % d_poses(:,1) = [0;0;0];
+    d_poses(:,distance_control_id_pair(2)) = [0;0;0];
+    pose1 = poses(:,distance_control_id_pair(1));
+    pose2 = poses(:,distance_control_id_pair(2));
+    desired_distance = 5;
+
+    distance_u = Calculate_Distance_U(pose1,pose2,desired_distance);
+    vel_vw(:,distance_control_id_pair(1)) = distance_u;
+    d_poses(:,distance_control_id_pair(1)) = [cos(poses(3,distance_control_id_pair(1))),0;sin(poses(3,distance_control_id_pair(1))),0;0,1] * vel_vw(:,distance_control_id_pair(1));
+    end
     % Discrete integration of pose
     poses = poses + d_poses*sampleTime;
 
-    if idx>1000
-        plot_connection(graph_matrix_semi,poses)
-    end
+%     if idx>1000
+%         plot_connection(graph_matrix_semi,poses)
+%     end
 end
 
 %% Helper function: Robot Controller Logic
@@ -77,4 +88,13 @@ function plot_connection(graph_matrix,poses)
             end
         end
     end
+end
+
+
+function distance_u = Calculate_Distance_U(pose1,pose2,desired_distance)
+    K_Gain  =  10;
+    pose_xy_diff = pose1(1:2) - pose2(1:2);
+    co_matrix = [cos(pose1(3)),sin(pose1(3));-sin(pose1(3)),cos(pose1(3))];
+    distance_u =  - K_Gain .* (1-desired_distance/norm(pose_xy_diff)) * co_matrix * pose_xy_diff;
+    distance_u = distance_u./norm(distance_u);
 end
