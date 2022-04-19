@@ -3,10 +3,13 @@ clear;
 numRobots = 6;
 env = MultiRobotEnv(numRobots);
 env.robotRadius = 0.15;
-env.showTrajectory = true;
+
+env.showTrajectory = false;
+env.showDesired = true;
+env.showConnection = true;
 graph_matrix_semi = [1,1,0,1,0,1;
                 0,1,1,0,1,0;
-                0,0,1,1,1,1;
+                0,0,1,0,1,1;
                 0,0,0,1,1,0;
                 0,0,0,0,1,1;
                 0,0,0,0,0,1];
@@ -19,51 +22,45 @@ poses = [10*(rand(2,numRobots) - 0.5); ...
 vel_xy = zeros(2,numRobots);
 vel_vw = zeros(2,numRobots);
 d_poses = zeros(3,numRobots);
-h_matrix= zeros(2,2);
+
 distance_u = zeros(2,1);
 distance_control_id_pair = [1;4];
 Control_Matrix = Cal_Control_Matrix(6,graph_matrix_semi);
 
+fid= fopen('test.txt', 'r');    % clear the data in txt
+q_desire =fscanf(fid, '%f', [numRobots*2,1]);
+
 %% Simulation loop
 for idx = 2:numel(tVec)
     % Update the environment
-    env(1:numRobots, poses);
+    env(1:numRobots,poses,q_desire,graph_matrix_semi);
     xlim([-8 8]);   % Without this, axis resizing can slow things down
     ylim([-8 8]);
 
-    for rIdx = 1:numRobots
-        h_matrix(:,:) = [   cos(poses(3,rIdx)),...
-                            sin(poses(3,rIdx));
-                            -sin(poses(3,rIdx)),...
-                            cos(poses(3,rIdx)) 
-                        ];
-        vel_xy(:,rIdx) = swarmTeamController(poses,rIdx,Control_Matrix);
-        vel_vw(:,rIdx) = h_matrix  * vel_xy(:,rIdx);
+    for rIdx = 1:numRobots              
+        vel_vw(:,rIdx) = swarmTeamController(poses,rIdx,Control_Matrix);
         d_poses(:,rIdx) = [cos(poses(3,rIdx)),0;sin(poses(3,rIdx)),0;0,1] * vel_vw(:,rIdx);
     end
-    if idx>1000
-    % d_poses(:,1) = [0;0;0];
-    d_poses(:,distance_control_id_pair(2)) = [0;0;0];
+
+    % leader control
     pose1 = poses(:,distance_control_id_pair(1));
     pose2 = poses(:,distance_control_id_pair(2));
-    desired_distance = 5;
-
-    distance_u = Calculate_Distance_U(pose1,pose2,desired_distance);
-    vel_vw(:,distance_control_id_pair(1)) = distance_u;
+    desired_pose1 = q_desire(distance_control_id_pair(1)*2-1:distance_control_id_pair(1)*2);
+    desired_pose2 = q_desire(distance_control_id_pair(2)*2-1:distance_control_id_pair(2)*2);
+    u1 = Calculate_Target_U(desired_pose1,pose1);
+    u2 = Calculate_Target_U(desired_pose2,pose2);
+    vel_vw(:,distance_control_id_pair(1)) = u1;
+    vel_vw(:,distance_control_id_pair(2)) = u2;
     d_poses(:,distance_control_id_pair(1)) = [cos(poses(3,distance_control_id_pair(1))),0;sin(poses(3,distance_control_id_pair(1))),0;0,1] * vel_vw(:,distance_control_id_pair(1));
-    end
-    % Discrete integration of pose
-    poses = poses + d_poses*sampleTime;
+    d_poses(:,distance_control_id_pair(2)) = [cos(poses(3,distance_control_id_pair(2))),0;sin(poses(3,distance_control_id_pair(2))),0;0,1] * vel_vw(:,distance_control_id_pair(2));
 
-%     if idx>1000
-%         plot_connection(graph_matrix_semi,poses)
-%     end
+    poses = poses + d_poses*sampleTime;
 end
 
 %% Helper function: Robot Controller Logic
-function [vel_xy] = swarmTeamController(poses,rIdx,control_m)
+function [vel_vw] = swarmTeamController(poses,rIdx,control_m)
     vel_xy = [0;0];
-    [row,col]=size(poses);
+    [~,col]=size(poses);
     for neighbor_index = 1:col
         if neighbor_index ~= rIdx
             pose_diff =(poses(1:2,neighbor_index) - poses(1:2,rIdx));
@@ -72,29 +69,29 @@ function [vel_xy] = swarmTeamController(poses,rIdx,control_m)
     end
     norm_vel = norm(vel_xy);
     vel_xy = vel_xy ./ norm_vel;
+    h_matrix= zeros(2,2);
+    h_matrix(:,:) = [   cos(poses(3,rIdx)),...
+                        sin(poses(3,rIdx));
+                        -sin(poses(3,rIdx)),...
+                        cos(poses(3,rIdx)) 
+                    ];
+    vel_vw = h_matrix  * vel_xy;
 end
 
-%% plot the connection 
-function plot_connection(graph_matrix,poses)
-    [row,col]=size(poses);
-    for index_1=1:col
-        for index_2=index_1:col
-            if graph_matrix(index_1,index_2)==1
-                x1=poses(1,index_1);
-                y1=poses(2,index_1);
-                x2=poses(1,index_2);
-                y2=poses(2,index_2);
-                line([x1,x2],[y1,y2]);
-            end
-        end
-    end
-end
-
-
-function distance_u = Calculate_Distance_U(pose1,pose2,desired_distance)
+%% distance controller for leader
+function distance_u = Calculate_Distance_U(pose1,pose2,desired_distance)   % return [v,w]
     K_Gain  =  10;
     pose_xy_diff = pose1(1:2) - pose2(1:2);
     co_matrix = [cos(pose1(3)),sin(pose1(3));-sin(pose1(3)),cos(pose1(3))];
     distance_u =  - K_Gain .* (1-desired_distance/norm(pose_xy_diff)) * co_matrix * pose_xy_diff;
     distance_u = distance_u./norm(distance_u);
+end
+
+%% target controller for leader
+function target_u = Calculate_Target_U(target_pose,pose_now)  % linear control law ;return [v,w]
+    K_Gain  =  10;
+    pose_xy_diff = target_pose(1:2) - pose_now(1:2);
+    co_matrix = [cos(pose_now(3)),sin(pose_now(3));-sin(pose_now(3)),cos(pose_now(3))];
+    target_u =   K_Gain .* co_matrix * pose_xy_diff;
+    target_u = target_u./norm(target_u);
 end

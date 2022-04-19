@@ -16,7 +16,7 @@ function A_final = Cal_Control_Matrix(agent_number,graph_matrix_semi)
     q_star_perpendicular = rotate_90_block*q_star;  % core base 4
 
     N = [q_star,q_star_perpendicular,E1,E2];  % kernal space
-    [U,S,V] = svd(N);
+    [U,~,~] = svd(N);
     U_last = U(:,5:end);
 
 %% calculate graph_matrix

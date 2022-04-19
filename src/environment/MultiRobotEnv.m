@@ -24,6 +24,8 @@ classdef MultiRobotEnv < matlab.System
         hasRobotDetector = false;   % Accept robot detections
         plotSensorLines = true;     % Plot sensor lines
         showRobotIds = true;        % Show robot IDs
+        showDesired = true;
+        showConnection = true;
         robotColors = [];           % Robot colors
         % Lidar
         sensorOffset = {[0 0]};          % Lidar sensor offset (x,y) [m]
@@ -52,6 +54,8 @@ classdef MultiRobotEnv < matlab.System
         fig;                        % Figure window
         ax;                         % Axes for plotting
         RobotHandle;                % Handle to robot body marker or circle
+        DesiredHandle;
+        ConnectionHandle;
         OrientationHandle;          % Handle to robot orientation line
         LidarHandles;               % Handle array to lidar lines
         TrajHandle;                 % Handle to trajectory plot
@@ -90,6 +94,23 @@ classdef MultiRobotEnv < matlab.System
             
             % Unpack the optional arguments
             idx = 1;
+            % Desired points
+            if obj.showDesired
+                desired_positions = varargin{idx};
+            
+                idx = idx + 1;
+            else
+                desired_positions = [];
+            end
+            % Connection 
+            if obj.showConnection
+                graph_matrix = varargin{idx};
+            
+                idx = idx + 1;
+            else
+                graph_matrix = [];
+            end
+
             % Waypoints
             if obj.hasWaypoints
                 waypoints = varargin{idx};
@@ -118,7 +139,13 @@ classdef MultiRobotEnv < matlab.System
             if ~isempty(robotIndices)
                 drawRobots(obj,robotIndices,poses,ranges);
             end
-            
+            if obj.showDesired
+                Draw_Desired_Positions(obj,desired_positions);
+            end
+            if obj.showConnection
+                Draw_Connection(obj,graph_matrix)
+            end
+
             % Update the figure
             drawnow('limitrate')           
         end    
@@ -175,6 +202,8 @@ classdef MultiRobotEnv < matlab.System
             % Initialize robot plot
             obj.OrientationHandle = cell(obj.numRobots,1);
             obj.RobotHandle = cell(obj.numRobots,1);
+            obj.DesiredHandle = cell(obj.numRobots,1);
+            obj.ConnectionHandle = cell(obj.numRobots*(obj.numRobots-1)/2,1);
             if isempty(obj.robotColors)
                 obj.robotColors = [0 0 1];
             end
@@ -199,8 +228,15 @@ classdef MultiRobotEnv < matlab.System
                     obj.IdHandles{rIdx} = text(0,0,num2str(rIdx), ... 
                                'Color',rColor,'FontWeight','bold');
                 end
+                if obj.showDesired
+                    obj.DesiredHandle{rIdx} = plot(obj.ax,0,0,'rx','LineWidth',2,'MarkerSize',10);
+                end
+                for r_connect = 1: obj.numRobots * (obj.numRobots-1)/2
+                    if obj.showConnection
+                        obj.ConnectionHandle{r_connect} = plot(obj.ax,0,0,'LineWidth',1);
+                    end
+                end
             end
-            
             % Initialize trajectory
             obj.TrajHandle = cell(obj.numRobots,1);
             obj.trajX = cell(obj.numRobots,1);
@@ -574,14 +610,42 @@ classdef MultiRobotEnv < matlab.System
             obj.robotDetectorMaxRange(rIdx) = detector.maxRange;
             
         end
-        
+
+        function Draw_Desired_Positions(obj,desired_positions)
+            for rIdx = 1:1:obj.numRobots
+                xc = desired_positions(rIdx*2-1);
+                yc = desired_positions(rIdx*2);
+                set(obj.DesiredHandle{rIdx},'xdata',xc,'ydata',yc);
+            end
+        end
+
+        function Draw_Connection(obj,graph_matrix)
+            total_index = 1;
+            for index_1=1:obj.numRobots
+                for index_2=index_1+1:obj.numRobots
+                    if graph_matrix(index_1,index_2)==1
+                        x1=obj.Poses(1,index_1);
+                        y1=obj.Poses(2,index_1);
+                        x2=obj.Poses(1,index_2);
+                        y2=obj.Poses(2,index_2);
+                    else
+                        x1=0;
+                        y1=0;
+                        x2=0;
+                        y2=0;
+                    end
+                    set(obj.ConnectionHandle{total_index},'xdata',[x1,x2],'ydata',[y1,y2])
+                    total_index = total_index + 1;
+                end
+            end
+        end
     end
     
     methods (Access = protected)
         
         % Define total number of inputs for system with optional inputs
         function n = getNumInputsImpl(obj)
-            n = 2;
+            n = 4;
             if obj.hasWaypoints
                 n = n + 1;
             end
