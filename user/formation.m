@@ -1,6 +1,6 @@
 clear;
 %% Initialization
-numRobots = 6;
+numRobots = 7;
 max_translational_v = 0.22;  % m/s
 max_rotational_w = 2.84;     % rad/s
 env = MultiRobotEnv(numRobots);
@@ -8,40 +8,52 @@ env.robotRadius = 0.15;
 
 env.showTrajectory = false;
 env.showDesired = true;
-env.showConnection = true;
+env.showConnection = false;
 randomized_matrix= randn(numRobots,numRobots);
 graph_matrix_semi = zeros(numRobots,numRobots);
-graph_matrix_semi(randomized_matrix>0.5) = 0.5;
-graph_matrix_semi = ones(numRobots,numRobots);
+for row = 1:numRobots-2
+    graph_matrix_semi(row,row) = 1;
+    graph_matrix_semi(row,row+1) = 1;
+    graph_matrix_semi(row,row+2) = 1;
+end
+graph_matrix_semi(numRobots-1,numRobots-1) = 1;
+graph_matrix_semi(numRobots-1,numRobots) = 1;
+graph_matrix_semi(numRobots,numRobots) = 1;
+graph_matrix_semi(1,numRobots) = 1;
 % graph_matrix_semi = [1,1,0,1,0,1;
 %                 0,1,1,0,1,0;
 %                 0,0,1,0,1,1;
 %                 0,0,0,1,1,0;
 %                 0,0,0,0,1,0;
 %                 0,0,0,0,0,1];
-graph_matrix_semi = [1,1,0,0,0,1;
-                0,1,1,0,0,0;
-                0,0,1,1,0,0;
-                0,0,0,1,1,0;
-                0,0,0,0,1,1;
-                0,0,0,0,0,1];
+% graph_matrix_semi = [1,1,0,0,0,1;
+%                 0,1,1,0,0,0;
+%                 0,0,1,1,0,0;
+%                 0,0,0,1,1,0;
+%                 0,0,0,0,1,1;
+%                 0,0,0,0,0,1];
 sampleTime = 0.01;              % Sample time [s]
 tVec = 0:sampleTime:10000;        % Time array                
 
 % Initialize poses randomly, and add bias to each "team"
-poses = [5*(rand(2,numRobots) - 0.5); ...
-         pi*rand(1,numRobots)];
+
 vel_xy = zeros(2,numRobots);
 vel_vw = zeros(2,numRobots);
 d_poses = zeros(3,numRobots);
 
 distance_u = zeros(2,1);
-distance_control_id_pair = [1;4];
+distance_control_id_pair = [1;5];
 Control_Matrix = Cal_Control_Matrix(numRobots,graph_matrix_semi);
 
 fid= fopen('formation_data.txt', 'r');    % clear the data in txt
 q_desire =fscanf(fid, '%f', [numRobots*2,1]);
-
+poses = zeros(3,numRobots);
+for i=1:numRobots
+    poses(1,i) = q_desire(i*2-1) + randn;
+    poses(2,i) = q_desire(i*2) + randn;
+end
+% poses = [5*(rand(2,numRobots) - 0.5); ...
+%          pi*rand(1,numRobots)];
 %% Simulation loop
 for idx = 2:numel(tVec)
     % Update the environment

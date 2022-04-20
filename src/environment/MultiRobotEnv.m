@@ -95,22 +95,13 @@ classdef MultiRobotEnv < matlab.System
             % Unpack the optional arguments
             idx = 1;
             % Desired points
-            if obj.showDesired
-                desired_positions = varargin{idx};
-            
-                idx = idx + 1;
-            else
-                desired_positions = [];
-            end
-            % Connection 
-            if obj.showConnection
-                graph_matrix = varargin{idx};
-            
-                idx = idx + 1;
-            else
-                graph_matrix = [];
-            end
+            desired_positions = varargin{idx};
+            idx = idx + 1;
 
+            % Connection 
+            graph_matrix = varargin{idx};
+            idx = idx + 1;
+            
             % Waypoints
             if obj.hasWaypoints
                 waypoints = varargin{idx};
