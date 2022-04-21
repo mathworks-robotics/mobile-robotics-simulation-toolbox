@@ -38,7 +38,7 @@ vel = zeros(3,numRobots);
 for idx = 2:numel(tVec)
     
     % Update the environment
-    env(1:numRobots, poses);
+    env(1:numRobots, poses,[],[]);
     xlim([-8 8]);   % Without this, axis resizing can slow things down
     ylim([-8 8]); 
     

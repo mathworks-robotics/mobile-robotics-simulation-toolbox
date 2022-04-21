@@ -24,8 +24,9 @@ classdef MultiRobotEnv < matlab.System
         hasRobotDetector = false;   % Accept robot detections
         plotSensorLines = true;     % Plot sensor lines
         showRobotIds = true;        % Show robot IDs
-        showDesired = true;
-        showConnection = true;
+        showDesired = false;
+        showConnection = false;
+        showRealTime = false;
         robotColors = [];           % Robot colors
         % Lidar
         sensorOffset = {[0 0]};          % Lidar sensor offset (x,y) [m]
@@ -56,6 +57,7 @@ classdef MultiRobotEnv < matlab.System
         RobotHandle;                % Handle to robot body marker or circle
         DesiredHandle;
         ConnectionHandle;
+        RealTimeHandle;
         OrientationHandle;          % Handle to robot orientation line
         LidarHandles;               % Handle array to lidar lines
         TrajHandle;                 % Handle to trajectory plot
@@ -90,8 +92,8 @@ classdef MultiRobotEnv < matlab.System
             % Check for closed figure
             if ~isvalid(obj.fig)
                 setupVisualization(obj);
-            end            
-            
+            end
+
             % Unpack the optional arguments
             idx = 1;
             % Desired points
@@ -101,7 +103,11 @@ classdef MultiRobotEnv < matlab.System
             % Connection 
             graph_matrix = varargin{idx};
             idx = idx + 1;
-            
+
+            % Real Time Display
+            real_time = varargin{idx};
+            idx = idx + 1;
+
             % Waypoints
             if obj.hasWaypoints
                 waypoints = varargin{idx};
@@ -125,7 +131,7 @@ classdef MultiRobotEnv < matlab.System
             
             % Draw the waypoints and objects
             drawWaypointsAndObjects(obj,waypoints,objects);
-           
+            
             % Draw the robots
             if ~isempty(robotIndices)
                 drawRobots(obj,robotIndices,poses,ranges);
@@ -137,6 +143,9 @@ classdef MultiRobotEnv < matlab.System
                 Draw_Connection(obj,graph_matrix)
             end
 
+            if obj.showRealTime
+                Draw_Real_Time(obj,real_time);
+            end
             % Update the figure
             drawnow('limitrate')           
         end    
@@ -195,6 +204,7 @@ classdef MultiRobotEnv < matlab.System
             obj.RobotHandle = cell(obj.numRobots,1);
             obj.DesiredHandle = cell(obj.numRobots,1);
             obj.ConnectionHandle = cell(obj.numRobots*(obj.numRobots-1)/2,1);
+            obj.RealTimeHandle = cell(1);
             if isempty(obj.robotColors)
                 obj.robotColors = [0 0 1];
             end
@@ -222,12 +232,20 @@ classdef MultiRobotEnv < matlab.System
                 if obj.showDesired
                     obj.DesiredHandle{rIdx} = plot(obj.ax,0,0,'rx','LineWidth',2,'MarkerSize',10);
                 end
+            end
+
+            if obj.showConnection
+                % Initialize customized plot : [connetion,real_time]
                 for r_connect = 1: obj.numRobots * (obj.numRobots-1)/2
-                    if obj.showConnection
                         obj.ConnectionHandle{r_connect} = plot(obj.ax,0,0,'LineWidth',1);
-                    end
                 end
             end
+
+            if obj.showRealTime
+                txt = ['now time: ' num2str(obj.RealTimeHandle{1}) ' seconds'];
+                obj.RealTimeHandle = text(4,0.5,txt);
+            end
+
             % Initialize trajectory
             obj.TrajHandle = cell(obj.numRobots,1);
             obj.trajX = cell(obj.numRobots,1);
@@ -630,13 +648,19 @@ classdef MultiRobotEnv < matlab.System
                 end
             end
         end
+
+        function Draw_Real_Time(obj,real_time_now)
+            delete(obj.RealTimeHandle)
+            txt = ['now time: ' num2str(real_time_now) ' seconds'];
+            obj.RealTimeHandle = text(4,0.5,txt);
+        end
     end
     
     methods (Access = protected)
         
         % Define total number of inputs for system with optional inputs
         function n = getNumInputsImpl(obj)
-            n = 4;
+            n = 5;
             if obj.hasWaypoints
                 n = n + 1;
             end

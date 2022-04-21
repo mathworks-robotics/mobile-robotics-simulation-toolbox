@@ -8,7 +8,8 @@ env.robotRadius = 0.15;
 
 env.showTrajectory = false;
 env.showDesired = true;
-env.showConnection = false;
+env.showConnection = true;
+env.showRealTime = true;
 randomized_matrix= randn(numRobots,numRobots);
 graph_matrix_semi = zeros(numRobots,numRobots);
 for row = 1:numRobots-2
@@ -57,7 +58,10 @@ end
 %% Simulation loop
 for idx = 2:numel(tVec)
     % Update the environment
-    env(1:numRobots,poses,q_desire,graph_matrix_semi);
+    real_time_now = idx * sampleTime;
+    env(1:numRobots,poses,q_desire,graph_matrix_semi,real_time_now);
+
+    
     xlim([-8 8]);   % Without this, axis resizing can slow things down
     ylim([-8 8]);
 
