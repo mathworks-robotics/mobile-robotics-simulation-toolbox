@@ -28,11 +28,11 @@ function A_final = Cal_Control_Matrix(agent_number,graph_matrix_semi)
 
 %% convex optimization
     cvx_begin
-        variable A(2*n,2*n)
+        variable A(2*n,2*n) symmetric
         maximize(lambda_min(U_last' *A * U_last))
         subject to
             A * N == 0;
-%             lambda_max(U_last' *A * U_last) <100;
+            lambda_max(U_last' *A * U_last) <= 10000;
             for row_index=1:n
                 for col_index=1:n
                     A(2*row_index-1,2*col_index-1) == A(2*row_index,2*col_index);
@@ -44,8 +44,10 @@ function A_final = Cal_Control_Matrix(agent_number,graph_matrix_semi)
                         A(2*row_index,2*col_index) == 0;
                     end
                 end
+
             end
     cvx_end
     eigs(A)
+    
     A_final = A;
 end
