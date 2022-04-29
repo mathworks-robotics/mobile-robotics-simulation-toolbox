@@ -27,6 +27,7 @@ classdef MultiRobotEnv < matlab.System
         showDesired = false;
         showConnection = false;
         showRealTime = false;
+        showCommand = false;
         robotColors = [];           % Robot colors
         % Lidar
         sensorOffset = {[0 0]};          % Lidar sensor offset (x,y) [m]
@@ -58,6 +59,7 @@ classdef MultiRobotEnv < matlab.System
         DesiredHandle;
         ConnectionHandle;
         RealTimeHandle;
+        CommandHandle;
         OrientationHandle;          % Handle to robot orientation line
         LidarHandles;               % Handle array to lidar lines
         TrajHandle;                 % Handle to trajectory plot
@@ -107,7 +109,10 @@ classdef MultiRobotEnv < matlab.System
             % Real Time Display
             real_time = varargin{idx};
             idx = idx + 1;
-
+            
+            % RealTime Command
+            command_vxy = varargin{idx};
+            idx = idx + 1;
             % Waypoints
             if obj.hasWaypoints
                 waypoints = varargin{idx};
@@ -145,6 +150,9 @@ classdef MultiRobotEnv < matlab.System
 
             if obj.showRealTime
                 Draw_Real_Time(obj,real_time);
+            end
+            if obj.showCommand
+                Draw_Command(obj,command_vxy,poses);
             end
             % Update the figure
             drawnow('limitrate')           
@@ -205,6 +213,8 @@ classdef MultiRobotEnv < matlab.System
             obj.DesiredHandle = cell(obj.numRobots,1);
             obj.ConnectionHandle = cell(obj.numRobots*(obj.numRobots-1)/2,1);
             obj.RealTimeHandle = cell(1);
+            obj.CommandHandle = cell(obj.numRobots,1);
+
             if isempty(obj.robotColors)
                 obj.robotColors = [0 0 1];
             end
@@ -231,6 +241,9 @@ classdef MultiRobotEnv < matlab.System
                 end
                 if obj.showDesired
                     obj.DesiredHandle{rIdx} = plot(obj.ax,0,0,'rx','LineWidth',2,'MarkerSize',10);
+                end
+                if obj.showCommand
+                    obj.CommandHandle{rIdx} = plot(obj.ax,0,0,'Color',[1,0,0],'LineWidth',1.5);
                 end
             end
 
@@ -654,13 +667,27 @@ classdef MultiRobotEnv < matlab.System
             txt = ['now time: ' num2str(real_time_now) ' seconds'];
             obj.RealTimeHandle = text(4,0.5,txt);
         end
+
+        function Draw_Command(obj,command_vxy,poses)
+            for rIdx = 1:obj.numRobots
+                x = poses(1,rIdx);
+                y = poses(2,rIdx);
+                command_x = command_vxy(1,rIdx);
+                command_y = command_vxy(2,rIdx);
+                % command_norm = norm(command_vxy); % Plot Command based on command norm unless it is too small.
+                scalar = 2;
+                xp = [x, x+(scalar*command_x)];
+                yp = [y, y+(scalar*command_y)];
+                set(obj.CommandHandle{rIdx},'xdata',xp,'ydata',yp);
+            end
+        end
     end
     
     methods (Access = protected)
         
         % Define total number of inputs for system with optional inputs
         function n = getNumInputsImpl(obj)
-            n = 5;
+            n = 6;
             if obj.hasWaypoints
                 n = n + 1;
             end
