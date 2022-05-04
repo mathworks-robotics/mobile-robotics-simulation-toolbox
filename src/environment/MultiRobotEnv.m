@@ -28,6 +28,7 @@ classdef MultiRobotEnv < matlab.System
         showConnection = false;
         showRealTime = false;
         showCommand = false;
+        saveData = false;
         robotColors = [];           % Robot colors
         % Lidar
         sensorOffset = {[0 0]};          % Lidar sensor offset (x,y) [m]
@@ -65,6 +66,13 @@ classdef MultiRobotEnv < matlab.System
         TrajHandle;                 % Handle to trajectory plot
         trajX;                      % X Trajectory points
         trajY;                      % Y Trajectory points
+        trajTheta;
+        cmd_vw_trans;
+        cmd_vw_rot;
+        cmd_xy_vx;
+        cmd_xy_vy;
+        last_save_time;
+        starting_time_string;
         WaypointHandle;             % Handle to waypoints
         ObjectHandles;               % Handle to objects
         ObjDetectorHandles = {};    % Handle array to object detector lines
@@ -110,8 +118,12 @@ classdef MultiRobotEnv < matlab.System
             real_time = varargin{idx};
             idx = idx + 1;
             
-            % RealTime Command
+            % RealTime Command vxy
             command_vxy = varargin{idx};
+            idx = idx + 1;
+
+            % RealTime Command vvw
+            command_vvw = varargin{idx};
             idx = idx + 1;
             % Waypoints
             if obj.hasWaypoints
@@ -152,7 +164,18 @@ classdef MultiRobotEnv < matlab.System
                 Draw_Real_Time(obj,real_time);
             end
             if obj.showCommand
-                Draw_Command(obj,command_vxy,poses);
+                Draw_Command(obj,command_vxy,command_vvw,poses);
+            end
+            if obj.saveData && (real_time - obj.last_save_time)>1
+                trajx = obj.trajX;
+                trajy = obj.trajY;
+                cmd_x = obj.cmd_xy_vx;
+                cmd_y = obj.cmd_xy_vy;
+                cmd_v = obj.cmd_vw_trans;
+                cmd_w = obj.cmd_vw_rot;
+                file_name  = ['data_log/data',obj.starting_time_string,'.mat'];
+                save(file_name,'trajx','trajy','cmd_x','cmd_y','cmd_v','cmd_w');
+                obj.last_save_time = real_time;
             end
             % Update the figure
             drawnow('limitrate')           
@@ -184,7 +207,8 @@ classdef MultiRobotEnv < matlab.System
             
             % Initialize poses
             obj.Poses = nan(3,obj.numRobots);
-            
+            obj.last_save_time = 0;
+            obj.starting_time_string = datestr(now,30);
             % Create figure
             FigureName = 'Multi-Robot Environment';
             FigureTag = 'MultiRobotEnvironment';
@@ -263,11 +287,26 @@ classdef MultiRobotEnv < matlab.System
             obj.TrajHandle = cell(obj.numRobots,1);
             obj.trajX = cell(obj.numRobots,1);
             obj.trajY = cell(obj.numRobots,1);
+            obj.trajTheta = cell(obj.numRobots,1);
+            obj.cmd_vw_trans = cell(obj.numRobots,1);
+            obj.cmd_vw_rot = cell(obj.numRobots,1);
+            obj.cmd_xy_vx = cell(obj.numRobots,1);
+            obj.cmd_xy_vy = cell(obj.numRobots,1);
             for rIdx = 1:obj.numRobots
-                if obj.showTrajectory(rIdx)
-                    obj.TrajHandle{rIdx} = plot(obj.ax,0,0,'b.-');
+                if obj.saveData
                     obj.trajX{rIdx} = [];
                     obj.trajY{rIdx} = [];
+                    obj.trajTheta{rIdx} =[];
+                    obj.cmd_vw_trans{rIdx} =[];
+                    obj.cmd_vw_rot{rIdx} =[];
+                    obj.cmd_xy_vx{rIdx} =[]; 
+                    obj.cmd_xy_vy{rIdx} =[];  
+                end
+                if obj.showTrajectory(rIdx)
+                    obj.trajX{rIdx} = [];
+                    obj.trajY{rIdx} = [];
+                    obj.TrajHandle{rIdx} = plot(obj.ax,0,0,'b.-');
+
                 end
             end
             
@@ -401,6 +440,11 @@ classdef MultiRobotEnv < matlab.System
             theta = pose(3);
             
             % Update the trajectory
+            if obj.saveData
+                obj.trajX{rIdx}(end+1) = x;
+                obj.trajY{rIdx}(end+1) = y;
+                obj.trajTheta{rIdx}(end+1)=theta;
+            end
             if obj.showTrajectory(rIdx)
                 obj.trajX{rIdx}(end+1) = x;
                 obj.trajY{rIdx}(end+1) = y;
@@ -668,12 +712,18 @@ classdef MultiRobotEnv < matlab.System
             obj.RealTimeHandle = text(4,0.5,txt);
         end
 
-        function Draw_Command(obj,command_vxy,poses)
+        function Draw_Command(obj,command_vxy,command_vvw,poses)
             for rIdx = 1:obj.numRobots
                 x = poses(1,rIdx);
                 y = poses(2,rIdx);
                 command_x = command_vxy(1,rIdx);
                 command_y = command_vxy(2,rIdx);
+                if obj.saveData
+                    obj.cmd_xy_vx{rIdx}(end+1) = command_x;
+                    obj.cmd_xy_vy{rIdx}(end+1) = command_x;
+                    obj.cmd_vw_trans{rIdx}(end+1) = command_vvw(1,rIdx);
+                    obj.cmd_vw_rot{rIdx}(end+1) = command_vvw(2,rIdx);
+                end
                 % command_norm = norm(command_vxy); % Plot Command based on command norm unless it is too small.
                 scalar = 2;
                 xp = [x, x+(scalar*command_x)];
@@ -687,7 +737,7 @@ classdef MultiRobotEnv < matlab.System
         
         % Define total number of inputs for system with optional inputs
         function n = getNumInputsImpl(obj)
-            n = 6;
+            n = 7;
             if obj.hasWaypoints
                 n = n + 1;
             end

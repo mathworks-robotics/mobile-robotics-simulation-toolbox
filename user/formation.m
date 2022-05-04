@@ -11,8 +11,10 @@ rand_id = 2;
 nearest_seleted_num = 2;
 distance_tolerance = 0.1;
 delta = 0.1;
-k_vector_control = 0;
-k_gradient_control = 1;
+k_vector_control = 0.5;
+k_gradient_control = 0.5;
+k_formation_keeping = 0.5;
+k_leader_tracking = 0.5;
 % multi_env settings
 env = MultiRobotEnv(numRobots);
 env.robotRadius = 0.15;
@@ -21,6 +23,7 @@ env.showDesired = true;
 env.showConnection = true;
 env.showRealTime = true;
 env.showCommand = true;
+env.saveData = true;
 % variable initialization
 graph_matrix_semi = zeros(numRobots,numRobots);
 vel_xy = zeros(2,numRobots);
@@ -62,7 +65,7 @@ for idx = 2:numel(tVec)
     real_time_now = idx * sampleTime;
     Control_Matrix_Rand =matrix_value(:,:,1);
     Control_Matrix = matrix_value(:,:,1);
-    env(1:numRobots,poses,q_desire,graph_matrix_semi,real_time_now,vel_xy);
+    env(1:numRobots,poses,q_desire,graph_matrix_semi,real_time_now,vel_xy,vel_vw);
     xlim([-8 8]);   % Without this, axis resizing can slow things down
     ylim([-8 8]);
 
@@ -101,15 +104,15 @@ for idx = 2:numel(tVec)
     u1 = u1 .* [max_translational_v;max_rotational_w];
     u2 = u2 .* [max_translational_v;max_rotational_w];
 
-    % manuever control
+    % manuever control TODO
     if 0
         vel_vw(:,distance_control_id_pair(1)) = [0.1,0];
         vel_vw(:,distance_control_id_pair(2)) = [0.1;0];
     else
-        vel_vw(:,distance_control_id_pair(1)) = vel_vw(:,distance_control_id_pair(1)) + u1;
-        vel_vw(:,distance_control_id_pair(2)) = vel_vw(:,distance_control_id_pair(2)) + u2;
-        vel_xy(:,distance_control_id_pair(1)) = vel_xy(:,distance_control_id_pair(1)) + u1_xy;
-        vel_xy(:,distance_control_id_pair(2)) = vel_xy(:,distance_control_id_pair(2)) + u2_xy;
+        vel_vw(:,distance_control_id_pair(1)) = vel_vw(:,distance_control_id_pair(1))*k_formation_keeping + u1*k_leader_tracking;
+        vel_vw(:,distance_control_id_pair(2)) = vel_vw(:,distance_control_id_pair(2))*k_formation_keeping + u2*k_leader_tracking;
+        vel_xy(:,distance_control_id_pair(1)) = vel_xy(:,distance_control_id_pair(1))*k_formation_keeping + u1_xy*k_leader_tracking;
+        vel_xy(:,distance_control_id_pair(2)) = vel_xy(:,distance_control_id_pair(2))*k_formation_keeping + u2_xy*k_leader_tracking;
     end
     
 
@@ -132,7 +135,6 @@ function [vel_vw,vel_xy] = swarmTeamController(poses,rIdx,control_m)
     norm_vel = norm(vel_xy);
 
     % only normalize when the norm of control law is bigger than 1.
-    norm_vel
     if norm_vel ~=0 && norm_vel >1
         vel_xy = vel_xy ./ norm_vel;
     end
@@ -152,13 +154,13 @@ function [vel_vw,vel_xy] = swarmTeamController(poses,rIdx,control_m)
 end
 
 %% distance controller for leader
-function distance_u = Calculate_Distance_U(pose1,pose2,desired_distance)   % return [v,w]
-    K_Gain  =  10;
-    pose_xy_diff = pose1(1:2) - pose2(1:2);
-    co_matrix = [cos(pose1(3)),sin(pose1(3));-sin(pose1(3)),cos(pose1(3))];
-    distance_u =  - K_Gain .* (1-desired_distance/norm(pose_xy_diff)) * co_matrix * pose_xy_diff;
-    distance_u = distance_u./norm(distance_u);
-end
+% function distance_u = Calculate_Distance_U(pose1,pose2,desired_distance)   % return [v,w]
+%     K_Gain  =  10;
+%     pose_xy_diff = pose1(1:2) - pose2(1:2);
+%     co_matrix = [cos(pose1(3)),sin(pose1(3));-sin(pose1(3)),cos(pose1(3))];
+%     distance_u =  - K_Gain .* (1-desired_distance/norm(pose_xy_diff)) * co_matrix * pose_xy_diff;
+%     distance_u = distance_u./norm(distance_u);
+% end
 
 %% target controller for leader
 function [target_u,target_xy] = Calculate_Target_U(target_pose,pose_now)  % linear control law ;return [v,w]
