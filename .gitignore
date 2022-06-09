@@ -1,3 +1,7 @@
 *.txt
-*.asv
+*.csv
 data_log
+*.bag
+*.zip
+2022*
+data2_start_from_near

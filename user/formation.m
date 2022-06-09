@@ -1,20 +1,20 @@
 clear;
 %% Initialization
 % important hyperparas
-numRobots = 5;
-max_translational_v = 0.5;  % m/s
+numRobots = 4;
+max_translational_v = 1.0;  % m/s
 max_rotational_w = 2.84;     % rad/s
-sampleTime = 0.01;              % Sample time [s]
+sampleTime = 0.005;              % Sample time [s]
 tVec = 0:sampleTime:10000;        % Time array
-distance_control_id_pair = [1;5];
+distance_control_id_pair = [1;3];
 rand_id = 2;
 nearest_seleted_num = 2;
 distance_tolerance = 0.1;
 delta = 0.1;
 k_vector_control = 0.5;
 k_gradient_control = 0.5;
-k_formation_keeping = 0.5;
-k_leader_tracking = 0.5;
+k_formation_keeping = 0.1;
+k_leader_tracking = 0.9;
 % multi_env settings
 env = MultiRobotEnv(numRobots);
 env.robotRadius = 0.15;
@@ -22,8 +22,8 @@ env.showTrajectory = false;
 env.showDesired = true;
 env.showConnection = true;
 env.showRealTime = true;
-env.showCommand = true;
-env.saveData = true;
+env.showCommand = false;
+env.saveData = false;
 % variable initialization
 graph_matrix_semi = zeros(numRobots,numRobots);
 vel_xy = zeros(2,numRobots);
@@ -45,14 +45,15 @@ graph_matrix_semi(1,numRobots) = 1;
 % read q_desire from files
 fid= fopen('formation_data.txt', 'r');    % clear the data in txt
 q_desire =fscanf(fid, '%f', [numRobots*2,1]);
-
+q_desire = q_desire;
 % calculate initial pose
 poses = zeros(3,numRobots);
 for i=1:numRobots
     poses(1,i) = q_desire(i*2-1) + randn;
     poses(2,i) = q_desire(i*2) + randn;
 end
-% poses = [3*(rand(2,numRobots) - 0.5); ...
+poses(1:2,2) = [0;-2];
+% poses = [6*(rand(2,numRobots) - 0.5); ...
 %          pi*rand(1,numRobots)];
 
 %% Calculate Control Matrix
@@ -145,6 +146,7 @@ function [vel_vw,vel_xy] = swarmTeamController(poses,rIdx,control_m)
         vel_xy(2)=0;
     end
     h_matrix= zeros(2,2);
+    poses(3,rIdx);
     h_matrix(:,:) = [   cos(poses(3,rIdx)),...
                         sin(poses(3,rIdx));
                         -sin(poses(3,rIdx)),...
@@ -165,7 +167,7 @@ end
 %% target controller for leader
 function [target_u,target_xy] = Calculate_Target_U(target_pose,pose_now)  % linear control law ;return [v,w]
     pose_xy_diff = target_pose(1:2) - pose_now(1:2);
-    if norm(pose_xy_diff) ~=0
+    if norm(pose_xy_diff) ~=0 && norm(pose_xy_diff)>1
         pose_xy_diff = pose_xy_diff./norm(pose_xy_diff);
     end
     co_matrix = [cos(pose_now(3)),sin(pose_now(3));-sin(pose_now(3)),cos(pose_now(3))];

@@ -14,7 +14,7 @@ x = pt(1,1);
 y = pt(1,2);
 fid= fopen('formation_data.txt', 'a');   
 fprintf(fid,'%.3f %.3f ',x,y);
-scatter(x,y);
+plot(x,y,'rx','LineWidth',2,'MarkerSize',10);
 xlim(xlimit);   % Without this, axis resizing can slow things down
 ylim(ylimit);
 hold on;
